@@ -533,3 +533,9 @@ function load_object(s::DeserializerState, ::Type{<: Set}, params::Ring)
   end
   return Set{T}(loaded_entries)
 end
+
+################################################################################
+# Sparse rows
+
+@register_serialization_type SRow uses_params
+
