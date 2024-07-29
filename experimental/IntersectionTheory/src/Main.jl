@@ -7,7 +7,7 @@
     abstract_bundle(X::AbstractVariety, ch::Union{MPolyDecRingElem, MPolyQuoRingElem})
     abstract_bundle(X::AbstractVariety, r::RingElement, c::Union{MPolyDecRingElem, MPolyQuoRingElem})
 
-Return a bundle on `X` by specifying its Chern character. Equivalently, specify its rank and
+Return an abstract vector bundle on `X` by specifying its Chern character. Equivalently, specify its rank and
 total Chern class.
 
 # Examples
@@ -408,7 +408,7 @@ end
 #
 # generic abstract_variety with some classes in given degrees
 @doc raw"""
-    abstract_variety(n::Int, symbols::Vector{String}, degs::Vector{Int})
+    abstract_variety(n::Int, symbols::Vector{String}, degs::Vector{Int}; base::Ring=QQ)
 
 Construct a generic abstract variety of dimension $n$ with some classes in given degrees.
 
@@ -499,7 +499,7 @@ end
 @doc raw"""
     chow_ring(X::AbstractVariety)
 
-Return the Chow ring of `X`.
+Return the Chow ring of the abstract variety `X`.
 
 # Examples
 ```jldoctest
@@ -574,9 +574,56 @@ julia> integral(p)
 point_class(X::AbstractVariety) = X.point
 
 @doc raw"""
+    hyperplane_class(X::AbstractVariety)
+
+If defined, return the class of a hyperplane section of `X`.
+
+!!! note
+    Speaking of a hyperplane class of `X` means that we have a specific embedding of `X` into projective space in mind.
+    For Grassmanians, for example, this embedding is the Plücker embedding. For the product of two abstract varieties with
+    given hyperplane classes, it is the Segre embedding.
+
+# Examples
+
+```jldoctest
+julia> G = abstract_grassmannian(2, 5)
+AbstractVariety of dim 6
+
+julia> hyperplane_class(G)
+-c[1]
+
+julia> degree(G) == integral(hyperplane_class(G)^dim(G)) == 5
+true
+
+```
+
+```jldoctest
+julia> P1s = abstract_projective_space(1, symbol = "s")
+AbstractVariety of dim 1
+
+julia> P1t = abstract_projective_space(1, symbol = "t")
+AbstractVariety of dim 1
+
+julia> P = P1s*P1t
+AbstractVariety of dim 2
+
+julia> H = hyperplane_class(P)
+s + t
+
+julia> integral(H^dim(P))
+2
+
+```
+"""
+function hyperplane_class(X::AbstractVariety)
+  return(X.O1)
+end
+
+
+@doc raw"""
     trivial_line_bundle(X::AbstractVariety)
 
-Return the trivial line bundle $\mathcal O_X$ on `X`. Alternatively, use `OO`.
+Return the trivial line bundle $\mathcal O_X$ on `X`. Alternatively, use `OO` instead of `trivial_line_bundle`.
 
 # Examples
 ```jldoctest
@@ -669,8 +716,8 @@ structure_map(X::AbstractVariety) = X.struct_map
     line_bundle(X::AbstractVariety, D::MPolyDecRingElem)
 
 Return the line bundle $\mathcal O_X(n)$ on `X` if `X` has been given a
-polarization, or a line bundle $\mathcal O_X(D)$ with first Chern class $D$.
-Alternatively, use `OO`.
+hyperplane class, or a line bundle $\mathcal O_X(D)$ with first Chern class $D$.
+Alternatively, use `OO` instead of `line_bundle`.
 
 # Examples
 ```jldoctest
@@ -691,7 +738,7 @@ OO(X::AbstractVariety, D::MPolyDecRingElem) = line_bundle(X, D)
 @doc raw"""
     degree(X::AbstractVariety)
 
-Compute the degree of `X` with respect to its polarization (if given).
+If `X` has been given a hyperplane class, return the corresponding degree of `X`.
 
 # Examples
 ```jldoctest
@@ -910,13 +957,34 @@ signature(X::AbstractVariety) = l_genus(X) # Hirzebruch signature theorem
 
 @doc raw"""
     hilbert_polynomial(F::AbstractBundle)
-    hilbert_polynomial(X::AbstractVariety)
 
-Compute the Hilbert polynomial of a bundle $F$ or the Hilbert polynomial of `X`
-itself, with respect to the polarization $\mathcal O_X(1)$ on `X`.
+If an abstract vector bundle `F` on an abstract variety with a specified hyperplane class is given, 
+return the corresponding Hilbert polynomial of `F`.
+
+# Examples
+```jldoctest
+julia> P2 = abstract_projective_space(2)
+AbstractVariety of dim 2
+
+julia> hilbert_polynomial(OO(P2))
+1//2*t^2 + 3//2*t + 1
+
+julia> euler_characteristic(OO(P2))
+1
+
+julia> euler_characteristic(OO(P2, 1))
+3
+
+julia> euler_characteristic(OO(P2, 2))
+6
+
+julia> euler_characteristic(OO(P2, 3))
+10
+
+```
 """
 function hilbert_polynomial(F::AbstractBundle)
-  !isdefined(F.parent, :O1) && error("no polarization is specified for the abstract_variety")
+  !isdefined(F.parent, :O1) && error("no hyperplane class is specified for the abstract_variety")
   X, O1 = F.parent, F.parent.O1
   # extend the coefficient ring to QQ(t)
   # TODO should we use FunctionField here?
@@ -935,6 +1003,25 @@ function hilbert_polynomial(F::AbstractBundle)
   hilb = constant_coefficient(div(simplify(ch_F * ch_O_t * td).f, simplify(pt).f))
   return hilb
 end
+
+@doc raw"""
+    hilbert_polynomial(X::AbstractVariety)
+
+If `X` has been given a hyperplane class, return the corresponding Hilbert polynomial of `X`.
+
+# Examples
+```jldoctest
+julia> P2 = abstract_projective_space(2)
+AbstractVariety of dim 2
+
+julia> hilbert_polynomial(P2) == hilbert_polynomial(OO(P2))
+true
+
+julia> hilbert_polynomial(P2)
+1//2*t^2 + 3//2*t + 1
+
+```
+"""
 hilbert_polynomial(X::AbstractVariety) = hilbert_polynomial(trivial_line_bundle(X))
 
 # find canonically defined morphism from X to Y
@@ -974,9 +1061,10 @@ end
 @doc raw"""
     product(X::AbstractVariety, Y::AbstractVariety)
 
-Return the product $X\times Y$. If both `X` and `Y` have a
-polarization, $X\times Y$ will be endowed with the polarization of the Segre
-embedding. Alternatively, use `*`.
+Return the product $X\times Y$. Alternatively, use `*`.
+
+!!!note 
+   If both `X` and `Y` have a hyperplane class, $X\times Y$ will be endowed with the hyperplane class corresponding to the Segre embedding.
 
 ```jldoctest
 julia> P2 = abstract_projective_space(2);
@@ -1399,7 +1487,7 @@ end
 @doc raw"""
     dual_basis(X::AbstractVariety)
 
-If `K = base(X)`, return a `K`-basis for the Chow ring of `X` which is dual to `basis(X)` with respect to the bilinear form defined by `intersection_matrix(X)`.
+If `K = base(X)`, return a `K`-basis for the Chow ring of `X` which is dual to `basis(X)` with respect to the `K`-bilinear form defined by `intersection_matrix(X)`.
 
 !!! note
     The basis elements are ordered by decreasing degree (geometrically, by decreasing codimension).
@@ -1971,7 +2059,7 @@ end
 @doc raw"""
     abstract_grassmannian(k::Int, n::Int; base::Ring = QQ, symbol::String = "c")
 
-Return the abstract Grassmannian $\mathrm{Gr}(k, n)$ of `k`-dimensional subspaces of an 
+Return the abstract Grassmannian $\mathrm{G}(k, n)$ of `k`-dimensional subspaces of an 
 `n`-dimensional vector space.
 
 # Examples
@@ -1986,14 +2074,27 @@ Quotient
     c[2] -> [2]
   by ideal (-c[1]^3 + 2*c[1]*c[2], c[1]^4 - 3*c[1]^2*c[2] + c[2]^2)
 
+julia> S = tautological_bundles(G)[1]
+AbstractBundle of rank 2 on AbstractVariety of dim 4
+
+julia> V = [chern_class(S, i) for i = 1:2]
+2-element Vector{MPolyQuoRingElem{MPolyDecRingElem{QQFieldElem, QQMPolyRingElem}}}:
+ c[1]
+ c[2]
+
 julia> is_regular_sequence(gens(modulus(CR)))
+true
+
+julia> Q = tautological_bundles(G)[2]
+AbstractBundle of rank 2 on AbstractVariety of dim 4
+
+julia> tangent_bundle(G) == dual(S)*Q
 true
 
 ```
 """
 function abstract_grassmannian(k::Int, n::Int; base::Ring = QQ, symbol::String = "c")
-  @assert k < n
- 
+  @assert k < n 
   d = k*(n-k)
   R, c = graded_polynomial_ring(base, _parse_symbol(symbol, 1:k), collect(1:k))
   inv_c = sum((-sum(c))^i for i in 1:n) # this is c(Q) since c(S)⋅c(Q) = 1
@@ -2164,34 +2265,3 @@ function abstract_flag_variety(F::AbstractBundle, dims::Vector{Int}; symbol::Str
   if l == 2 set_attribute!(Fl, :grassmannian => :relative) end
   return Fl
 end
-
-@doc raw"""
-    schubert_class(G::AbstractVariety, λ::Int...)
-    schubert_class(G::AbstractVariety, λ::Vector{Int})
-    schubert_class(G::AbstractVariety, λ::Partition)
-
-Return the Schubert class $\sigma_\lambda$ on a (relative) Grassmannian $G$.
-"""
-function schubert_class(G::AbstractVariety, λ::Int...) schubert_class(G, collect(λ)) end
-function schubert_class(G::AbstractVariety, λ::Partition) schubert_class(G, Vector(λ)) end
-function schubert_class(G::AbstractVariety, λ::Vector{Int})
-  get_attribute(G, :grassmannian) === nothing && error("the abstract_variety is not a Grassmannian")
-  (length(λ) > rank(G.bundles[1]) || sort(λ, rev=true) != λ) && error("the Schubert input is not well-formed")
-  giambelli(G.bundles[2], λ)
-end
-
-@doc raw"""
-    schubert_classes(m::Int, G::AbstractVariety)
-
-Return all the Schubert classes in codimension $m$ on a (relative) Grassmannian $G$.
-"""
-function schubert_classes(G::AbstractVariety, m::Int)
-  get_attribute(G, :grassmannian) === nothing && error("the abstract_variety is not a Grassmannian")
-  S, Q = G.bundles
-  res = elem_type(G.ring)[]
-  for i in 0:rank(S)
-    append!(res, [schubert_class(G, l) for l in partitions(m, i, 1, rank(Q))])
-  end
-  return res
-end
-

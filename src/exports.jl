@@ -882,6 +882,7 @@ export is_total
 export is_transitive
 export is_transverse_intersection
 export is_trivial
+export is_tropically_generic
 export is_two_sided
 export is_unipotent
 export is_unit
@@ -1394,6 +1395,7 @@ export slpoly_ring
 export small_generating_set, has_small_generating_set, set_small_generating_set
 export small_group
 export small_group_identification, has_small_group_identification
+export smaller_degree_permutation_representation
 export snub_cube
 export snub_dodecahedron
 export socle, has_socle, set_socle
@@ -1478,6 +1480,7 @@ export transportation_polytope
 export trivial_character
 export trivial_divisor
 export trivial_divisor_class
+export trivial_line_bundle
 export trivial_morphism
 export trivial_subgroup, has_trivial_subgroup, set_trivial_subgroup
 export tropical_matrix

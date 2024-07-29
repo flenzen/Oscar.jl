@@ -35,6 +35,8 @@ export associated_literature_models
 export base_space
 export blow_up
 export calabi_yau_hypersurface
+export chern_class_c1
+export chern_class_c2
 export classes_of_model_sections
 export components_of_dual_graph
 export components_of_simplified_dual_graph
@@ -51,6 +53,7 @@ export estimated_number_of_triangulations
 export explicit_model_sections
 export family_of_spaces
 export fiber_ambient_space
+export g4_flux
 export gauge_algebra
 export genera_of_ci_curves
 export genera_of_components_of_dual_graph
@@ -121,6 +124,7 @@ export kbar3
 export literature_identifier
 export literature_model
 export max_lattice_pts_in_facet
+export model
 export model_description
 export model_index
 export model_parameters
@@ -128,6 +132,7 @@ export paper_authors
 export paper_buzzwords
 export paper_description
 export paper_title
+export passes_elementary_quantization_checks
 export polytope_index
 export put_over_concrete_base
 export birational_literature_models
