@@ -7,6 +7,7 @@ import ..Oscar: basis, betti, chow_ring, codomain, degree, det, dim, domain, dua
 import ..Oscar.AbstractAlgebra: combinations
 import ..Oscar.AbstractAlgebra.Generic: FunctionalMap
 import..Oscar: pullback, pushforward, base, OO, product, compose
+import ..Oscar: trivial_line_bundle
 
 export a_hat_genus
 export abstract_bundle
@@ -37,6 +38,7 @@ export dual_basis
 export euler
 export euler_pairing
 export graph
+export hyperplane_class
 export intersection_matrix
 export l_genus
 export linear_subspaces_on_hypersurface
@@ -75,8 +77,9 @@ include("Types.jl")
 include("Misc.jl")
 
 include("Bott.jl")   # integration using Bott's formula
-include("Main.jl")   # basic constructions for Schubert calculus
+include("Main.jl")   # basic constructors and functionality
 include("blowup.jl") # blowup
+include("schubert.jl") # Schubert calculus
 # include("Moduli.jl") # moduli of matrices, twisted cubics
 # include("Weyl.jl")   # weyl groups
 
@@ -113,6 +116,7 @@ export dual_basis
 export euler
 export euler_pairing
 export graph
+export hyperplane_class
 export intersection_matrix
 export l_genus
 export linear_subspaces_on_hypersurface

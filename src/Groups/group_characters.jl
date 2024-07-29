@@ -1902,7 +1902,7 @@ GAP.julia_to_gap(chi::GAPGroupClassFunction) = chi.values
 parent(chi::GAPGroupClassFunction) = chi.table
 
 function Base.show(io::IO, chi::GAPGroupClassFunction)
-    print(io, "class_function($(parent(chi)), $(values(chi)))")
+    print(io, "class_function($(parent(chi)), [", join(values(chi), ", "), "])")
 end
 
 function values(chi::GAPGroupClassFunction)
@@ -2404,6 +2404,17 @@ function Base.:*(chi::GAPGroupClassFunction, psi::GAPGroupClassFunction)
     @req parent(chi) === parent(psi) "character tables must be identical"
     return GAPGroupClassFunction(parent(chi), GapObj(chi) * GapObj(psi))
 end
+
+"""
+    tensor_product(chi::GAPGroupClassFunction, psi::GAPGroupClassFunction)
+
+Return the pointwise product of `chi` and `psi`.
+The resulting character is afforded by the tensor product of representations
+corresponding to `chi` and `psi`, hence the name.
+
+Alias for `chi * psi`.
+"""
+tensor_product(chi::GAPGroupClassFunction, psi::GAPGroupClassFunction) = chi * psi
 
 function Base.zero(chi::GAPGroupClassFunction)
     val = QQAbFieldElem(0)
