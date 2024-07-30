@@ -74,8 +74,11 @@ end
 const reverse_type_map = Dict{String, Type}()
 
 function encode_type(::Type{T}) where T
-  error("Unsupported type '$T' for encoding. to add support see
- https://docs.oscar-system.org/stable/DeveloperDocumentation/serialization/ \n")
+  error(
+    """Unsupported type '$T' for encoding. To add support see
+    https://docs.oscar-system.org/stable/DeveloperDocumentation/serialization/
+    """
+  )
 end
 
 function decode_type(s::DeserializerState)
@@ -316,12 +319,12 @@ function register_serialization_type(ex::Any, str::String, uses_id::Bool, uses_p
 
       # only extend serialize on non std julia types
       if !($ex <: Union{Number, String, Bool, Symbol, Vector, Tuple, Matrix, NamedTuple, Dict, Set})
-        function Oscar.serialize(s::AbstractSerializer, obj::T) where T <: $ex
+        function Oscar.serialize(s::Oscar.AbstractSerializer, obj::T) where T <: $ex
           Oscar.serialize_type(s, T)
-          Oscar.save(s.io, obj; serializer_type=IPCSerializer)
+          Oscar.save(s.io, obj; serializer_type=Oscar.IPCSerializer)
         end
-        function Oscar.deserialize(s::AbstractSerializer, ::Type{<:$ex})
-          Oscar.load(s.io; serializer_type=IPCSerializer)
+        function Oscar.deserialize(s::Oscar.AbstractSerializer, ::Type{<:$ex})
+          Oscar.load(s.io; serializer_type=Oscar.IPCSerializer)
         end
       end
 
@@ -364,6 +367,51 @@ macro register_serialization_type(ex::Any, args...)
 
   return register_serialization_type(ex, str, uses_id, uses_params)
 end
+
+
+################################################################################
+# Utility macro
+"""
+    @import_all_serialization_functions
+
+This macro imports all serialization related functions that one may need for implementing
+serialization for custom types from Oscar into the current module.
+One can instead import the functions individually if needed but this macro is provided
+for convenience.
+"""
+macro import_all_serialization_functions()
+  return quote
+    import Oscar:
+      load_object,
+      load_type_params,
+      save_object,
+      save_type_params
+
+    using Oscar:
+      @register_serialization_type,
+      DeserializerState,
+      SerializerState,
+      encode_type,
+      haskey,
+      load_array_node,
+      load_node,
+      load_object,
+      load_params_node,
+      load_ref,
+      load_typed_object,
+      save_as_ref,
+      save_data_array,
+      save_data_basic,
+      save_data_dict,
+      save_data_json,
+      save_object,
+      save_typed_object,
+      serialize_with_id,
+      serialize_with_params,
+      set_key
+  end
+end
+
 
 ################################################################################
 # Include serialization implementations for various types
