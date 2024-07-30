@@ -372,7 +372,7 @@ end
 ################################################################################
 # Utility macro
 """
-    @import_all_serialization_functions
+    Oscar.@import_all_serialization_functions
 
 This macro imports all serialization related functions that one may need for implementing
 serialization for custom types from Oscar into the current module.
@@ -395,7 +395,6 @@ macro import_all_serialization_functions()
       haskey,
       load_array_node,
       load_node,
-      load_object,
       load_params_node,
       load_ref,
       load_typed_object,
@@ -404,7 +403,6 @@ macro import_all_serialization_functions()
       save_data_basic,
       save_data_dict,
       save_data_json,
-      save_object,
       save_typed_object,
       serialize_with_id,
       serialize_with_params,

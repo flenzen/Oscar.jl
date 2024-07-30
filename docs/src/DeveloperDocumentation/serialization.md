@@ -290,7 +290,7 @@ When implementing the serialization of a new type in a module that is not
 a lot of helper functions (see the examples above).
 To ease this process, the `@import_all_serialization_functions` macro can be used.
 ```@docs
-@import_all_serialization_functions
+Oscar.@import_all_serialization_functions
 ```
 
 ### Serializers
