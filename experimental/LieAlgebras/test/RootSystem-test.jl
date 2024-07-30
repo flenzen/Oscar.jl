@@ -45,7 +45,7 @@
       @test all(i -> negative_root(R, i) == negative_roots(R)[i], 1:npositive_roots)
       @test simple_roots(R) == positive_roots(R)[1:rk]
       @test all(is_root, roots(R))
-      @test !is_root(root(R, 1) - root(R, 1))
+      n_roots(R) >= 1 && @test !is_root(root(R, 1) - root(R, 1))
       @test all(r -> !is_root(2 * r), roots(R))
       @test all(is_root_with_index(r) == (true, i) for (i, r) in enumerate(roots(R)))
       @test all(r -> is_positive_root(r) == is_positive_root_with_index(r)[1], roots(R))
@@ -77,7 +77,7 @@
       @test all(i -> negative_coroot(R, i) == negative_coroots(R)[i], 1:npositive_roots)
       @test simple_coroots(R) == positive_coroots(R)[1:rk]
       @test all(is_coroot, coroots(R))
-      @test !is_coroot(coroot(R, 1) - coroot(R, 1))
+      n_roots(R) >= 1 && @test !is_coroot(coroot(R, 1) - coroot(R, 1))
       @test all(r -> !is_coroot(2 * r), coroots(R))
       @test all(is_coroot_with_index(r) == (true, i) for (i, r) in enumerate(coroots(R)))
       @test all(
@@ -112,6 +112,11 @@
           dot(coefficients(coroot(R, i)) * cartan_matrix(R), coefficients(root(R, i))) == 2,
         1:n_roots(R),
       )
+    end
+
+    @testset "rk 0" begin
+      R = root_system(zero_matrix(ZZ, 0, 0))
+      root_system_property_tests(R, 0, 0)
     end
 
     @testset "A_$n" for n in [1, 2, 6]

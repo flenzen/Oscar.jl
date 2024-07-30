@@ -109,6 +109,18 @@ if !isdefined(Main, :lie_algebra_conformance_test)
       end
     end
 
+    @testset "Root systems" begin
+      if has_root_system(L)
+        rs = root_system(L)
+        @test rs isa RootSystem
+        @test dim(L) == n_roots(rs) + n_simple_roots(rs)
+        chev = @inferred chevalley_basis(L)
+        @test length(chev) == 3
+        @test length(chev[1]) == length(chev[2])
+        @test dim(L) == sum(length, chev; init=0)
+      end
+    end
+
     @testset "Serialization" begin
       mktempdir() do path
         test_save_load_roundtrip(path, L) do loaded
