@@ -39,11 +39,15 @@ complete_intersection(X::AbstractVariety, degs::Int...)
 ```
 
 ```@docs
-abstract_projective_bundle(F::AbstractBundle; symbol::String = "h")
+abstract_projective_bundle(F::AbstractBundle; symbol::String = "z")
 ```
 
 ```@docs
-abstract_flag_variety(F::AbstractBundle, d::Int; symbol::String="c")
+abstract_hirzebruch_surface(n::Int)
+```
+
+```@docs
+abstract_flag_variety(F::AbstractBundle, dims::Int...; symbol::String = "c")
 ```
 
 ```@docs
@@ -51,7 +55,7 @@ zero_locus_section(F::AbstractBundle; class::Bool = false)
 ```
 
 ```@docs
-degeneracy_locus(k::Int, F::AbstractBundle, G::AbstractBundle; class::Bool=false)
+degeneracy_locus(F::AbstractBundle, G::AbstractBundle, k::Int; class::Bool=false)
 ```
 
 !!! note
@@ -79,6 +83,10 @@ point_class(X::AbstractVariety)
 
 ```@docs
 tangent_bundle(X::AbstractVariety)
+```
+
+```@docs
+hyperplane_class(X::AbstractVariety)
 ```
 
 ```@docs
@@ -116,6 +124,22 @@ canonical_bundle(X::AbstractVariety)
 degree(X::AbstractVariety)
 ```
 
+```@docs
+hilbert_polynomial(X::AbstractVariety)
+```
+
+```@docs
+basis(X::AbstractVariety)
+```
+
+```@docs
+intersection_matrix(X::AbstractVariety)
+```
+
+```@docs
+dual_basis(X::AbstractVariety)
+```
+
 !!! note
     If `X` is of type `AbstractVariety`, entering `total_chern_class(X)` returns the total Chern class of the tangent bundle of `X`. Similarly for entering `euler(X)`, `chern_class(X, k)`,  `todd_class(X)`, `total_pontryagin_class(X)`, `pontryagin_class(X, k)`
 
@@ -127,3 +151,31 @@ product(X::AbstractVariety, Y::AbstractVariety)
 
 !!! note
     Blowups are described in their own section.
+
+## Integrate Chow Ring Elements
+
+```@julia
+integral(x::MPolyDecRingElem)
+```
+
+Given an element `x` of the Chow ring of an abstract variety `X`, say, return the integral of `x`.
+
+!!! note
+    If `X` has a (unique) point class, the integral will be a number (that is, a `QQFieldElem` or a function field element). Otherwise, the highests degree part of $x$ is returned (geometrically, this is the 0-dimensional part of $x$).
+
+###### Examples
+
+```jldoctest
+julia> G = abstract_grassmannian(2, 4)
+AbstractVariety of dim 4
+
+julia> Q = tautological_bundles(G)[2]
+AbstractBundle of rank 2 on AbstractVariety of dim 4
+
+julia> E = symmetric_power(Q, 3)
+AbstractBundle of rank 4 on AbstractVariety of dim 4
+
+julia> integral(top_chern_class(E))
+27
+
+```

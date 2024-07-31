@@ -1,3 +1,35 @@
+########################################################## DESCRIPTION OF TERMINOLOGY ###########################################################
+# The definitions here SHOULD apply throughout FTheoryTools!
+#                                                defining_classes: This should be a dictionary that includes specifies the divisor classes
+#                                                                  of any parameters used to tune the model beyond the fully generic
+#                                                                  Weierstrass/Tate/etc polynomial. For example, a Tate SU(5) Model
+#                                                                  may be tuned by setting
+#                                                                      a1 = a10
+#                                                                      a2 = a21 * w
+#                                                                      a3 = a32 * w^2
+#                                                                      a4 = a43 * w^3
+#                                                                      a6 = a65 * w^5
+#                                                                  in which case defining_classes would be Dict("w" => w) with w being a
+#                                                                  divisor class
+#                                                  model_sections: This is a list of the names of all parameters appearing in the model, each
+#                                                                  of which is a section of a line bundle. This should include the sections
+#                                                                  whose classes are a part of defining_classes (usually using the same
+#                                                                  symbol, by abuse of notation). In the case of the example above,
+#                                                                  model_sections would be ["w", "a1", "a21", "a32", "a43", "a65"].
+# classes_of_model_sections_in_basis_of_Kbar_and_defining_classes: This should be a matrix giving the classes of all parameters (model sections)
+#                                                                  in terms of Kbar and the defining classes. Each column should give the divisor
+#                                                                  class of the corresponding model section in this basis. In the case of the
+#                                                                  example above, this should be [0 1 2 3 4 6; 1 0 -1 -2 -3 -5].
+#                                defining_section_parametrization: This should be a dictionary that defines how the "default" parameters of
+#                                                                  the given model type are defined in terms of the sections of the defining
+#                                                                  classes. In the case of the example above, defining_section_parametrization
+#                                                                  would be Dict("a1" => a10, "a2" => a21 * w, "a3" => a32 * w^2,
+#                                                                      "a4" => a43 * w^3, "a6" => a65 * w^5)
+#                                         explicit_model_sections: This should be a dictionary that gives the explicit forms of every section
+#                                                                  in the model. In the case of the example above, this would include keys "a1",
+#                                                                  "a2", "a3", "a4", "a6", "w", "a10", "a21", "a32", "a43", and "a65".
+#################################################################################################################################################
+
 #######################################################
 # 1. User interface for literature models
 #######################################################
@@ -29,8 +61,13 @@ model can be found, or multiple models exist with information matching the
 provided information, then an error is raised.
 
 Some literature models require additional parameters to specified to single out
-a model from a family of models. Such models can be provided using the optional
+a model from a family of models. Such parameters can be provided using the optional
 argument `model_parameters`, which should be a dictionary such as `Dict("k" => 5)`.
+
+Further, some literature models require the specification of one or more divisor
+classes that define the model. This information can be provided using the optional
+argument `defining_classes`, which should be a dictionary such as `Dict("w" => w)`,
+where `w` is a divisor, such as that provided by `torusinvariant_prime_divisors`.
 
 ```jldoctest
 julia> t = literature_model(arxiv_id = "1109.3454", equation = "3.1")
@@ -152,7 +189,7 @@ function literature_model(model_dict::Dict{String, Any}; model_parameters::Dict{
     
     for (key, val) in model_parameters
       map!(x -> nested_string_map(s -> replace(s, key => string(val)), x), values(model_dict["model_data"]))
-      map!(x -> nested_string_map(s -> replace(s, key => string(val)), x), values(model_dict["model_descriptors"]))
+      map!(x -> nested_string_map(s -> replace(s, string("#", key) => string(val)), x), values(model_dict["model_descriptors"]))
       map!(x -> nested_string_map(s -> replace(s, r"\(([^(),]+)\)" => dim -> string("(", Oscar.eval_poly(string.(match(r"\(([^(),]+)\)", dim).captures[1]), ZZ),")")), x), values(model_dict["model_descriptors"]))
     end
   end
@@ -541,8 +578,8 @@ function _set_all_attributes(model::AbstractFTheoryModel, model_dict::Dict{Strin
   set_journal_model_page(model, model_dict["journal_data"]["model_location"]["page"])
   set_journal_model_section(model, model_dict["journal_data"]["model_location"]["section"])
   
-  if haskey(model_dict, "related_models")
-    set_attribute!(model, :related_literature_models => [str[6:end - 5] for str in model_dict["related_models"]])
+  if haskey(model_dict, "birational_models")
+    set_attribute!(model, :birational_literature_models => [str[6:end - 5] for str in model_dict["birational_models"]])
   end
   
   if haskey(model_dict, "associated_models")
@@ -598,6 +635,16 @@ function _set_all_attributes(model::AbstractFTheoryModel, model_dict::Dict{Strin
   if haskey(model_dict["model_descriptors"], "global_gauge_quotients")
     set_global_gauge_quotients(model, map(k -> string.(k), model_dict["model_descriptors"]["global_gauge_quotients"]))
   end
+  
+  if haskey(model_dict, "birational_models")
+    for m in model_dict["birational_models"]
+      model_directory = joinpath(@__DIR__, "Models/")
+      model_data = JSON.parsefile(model_directory * m)
+      if model_data["model_descriptors"]["type"] == "weierstrass"
+        set_attribute!(model, :weierstrass_model => m)
+      end
+    end
+  end  
 end
 
 
