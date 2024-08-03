@@ -10,13 +10,16 @@
 
 """ Encode simplex `xs` (ascendingly sorted list of 0-based vertices) in CNS."""
 function encode(xs::Vector{Int})
+  @req all(xs .> 0) "Can only decode positive numbers."
 	@req issorted(xs) "xs must be sorted" #TODO Remove for efficiency?
-	sum(binomial(v - 1, i) for (i, v) in enumerate(xs))
+	sum(binomial(v - 1, i) for (i, v) in enumerate(xs)) + 1
 end
 
 import Base.Iterators.countfrom
 """ Decode a `dim`-dimensional simplex from CNS. Returns ascendingly sorted list of 1-indexed vertices."""
 function decode(σ::Int, dim::Int)
+  @req σ > 0 "Can only decode positive numbers."
+  σ -= 1
 	xs = Vector{Int}(undef, dim + 1) # The decoded vertices
 	i = dim + 1 # Index of the decoded vertex in xs
 	while i >= 1
@@ -34,9 +37,11 @@ end
 
 """ Returns the encoded faces of an encoded, `dim`-dimensional simplex in ascending order."""
 function faces(σ::Int, dim::Int)
+  @req σ > 0 "Can only decode positive numbers."
 	if dim == 0
 		return Vector{Int}()
 	end
+  σ -= 1
 	fs = Vector{Int}() # faces
 	sizehint!(fs, dim + 1)
 	ρ = 0::Int

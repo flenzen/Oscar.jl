@@ -1,7 +1,7 @@
 # Generates the coboundary matrices of a diameter-filtered Vietoris-Rips complex.
 # A Vietoris-Rips complex on a point cloud X is the abstract simplicial complex
 # VR(X) ≔ 2^X. It is filtered by the diameter diam σ ≔ max{d(x, y) | x, y ∈ σ}.
-# In practise, one truncates VR(X) at a fixed threshold t, i.e.,
+# In practise, one truncates VR(X) at a fixed cutoff value t, i.e.,
 # VR(X) ≔ {σ ∈ 2^X | diam σ ≤ t}.
 
 #TODO Use UInt instead of Int, where applicable.
@@ -12,26 +12,29 @@ include("CombinatorialNumberSystem.jl")
 """ Represents one stage during the computation of Vietoris-Rips coboundary maps."""
 struct VietorisRipsComplex
 	distances::Array{Float64, 2}
+  #TODO Probably, we want the neighbors in order of increasing distances:
+  # This would at least create the cofaces of each simplex in the correct order.
+  # How to we create the list of next-dim simplices in the correct order?
 	neighbors::Vector{Vector{Int}}
 	dimension::Int
-	simplices::Vector{Int}
-	diameters::Vector{Int}
+	simplices::Vector{Tuple{Float64, Int}}
 end
 
 """
-	vietoris_rips_complex(distances[, threshold])
+	vietoris_rips_complex(distances[, cutoff])
 	
-Creates a new Vietoris-Rips complex. """
-function vietoris_rips_complex(distances::Array{Float64, 2}, threshold = Inf::Float64)
+Creates a new Vietoris-Rips complex. If `cutoff` is a finite value, then all points
+with distance larger or equal `cutoff` are considered not adjacent. For reasonably
+large point clouds, one wants to set a point cloud."""
+function vietoris_rips_complex(distances::Array{Float64, 2}, cutoff = Inf::Float64)
+  #TODO Beyond maximum(distances), the Vietoris-Rips complex is contractible, so this would make a natural cutoff value.
 	@req is_symmetric(distances) && all(distances .>= 0) "Matrix must be a distance matrix"
 	n = size(distances, 1)
 	VietorisRipsComplex(
-		distances,
-		[[j for j in 1:n if distances[i, j] <= threshold && i != j] for i in 1:n],
-		# [sort([j for j in 1:n if distances[i, j] <= threshold && i != j], by=j->distances[i,j]) for i in 1:n],
-		0,
-		collect(1:n),
-		[0 for _ in 0:n-1],
+		distances, # distance matrix
+		[[j for j in 1:n if distances[i, j] < cutoff && i != j] for i in 1:n], # list (length n) of lists of the neighbors of the points
+    0, # dimension
+		collect(zip(Iterators.repeated(0), 1:n)), # list of pairs (0-dim simplices, their diameters)
 	)
 end
 
@@ -39,7 +42,7 @@ end
 """
 	coboundary_map(K :: VietorisRipsComplex)
 	
-Computes the next coboundary map of a Vietoris-Rips complex.
+The next coboundary map of a Vietoris-Rips complex.
 
 Returns the next piece of data, plus the actual coboundary matrix.
 
@@ -47,15 +50,15 @@ Returns the next piece of data, plus the actual coboundary matrix.
 ```jldoctest
 julia> distance_matrix = [0.0 1.0 2.0 3.0; 1.0 0.0 1.0 2.0; 2.0 1.0 0.0 1.0; 3.0 2.0 1.0 0.0];
 
-julia> V = vietoris_rips_complex(distance_matrix);
+julia> V = Oscar.vietoris_rips_complex(distance_matrix);
 
-julia> V, δ0 = coboundary_map(V); δ0
+julia> V, δ0 = Oscar.coboundary_map(V); δ0
 [ 1    1    0    1    0    0]
 [-1    0    1    0    1    0]
 [ 0   -1   -1    0    0    1]
 [ 0    0    0   -1   -1   -1]
 
-julia> V, δ1 = coboundary_map(V); δ1
+julia> V, δ1 = Oscar.coboundary_map(V); δ1
 [ 1    1    0    0]
 [-1    0    1    0]
 [ 1    0    0    1]
@@ -66,17 +69,20 @@ julia> V, δ1 = coboundary_map(V); δ1
 function coboundary_map(K::VietorisRipsComplex)
 	# Algorithm taken from https://gitlab.com/flenzen/2pac/-/blob/main/CliqueComplex.cpp
 	coboundary_columns = [Vector{Tuple{Float64, Int, Int}}() for _ in 1:length(K.simplices)]
-	simplices_next_dim = Vector{Int}()
-	diameters_next_dim = Vector{Float64}()
+	simplices_next_dim = Vector{Tuple{Float64, Int}}()
 	index_of_simplex_next_dim = Dict{Int, Int}()
 
-	for (column_index, (σ, diam)) in enumerate(zip(K.simplices, K.diameters))
+	for (column_index, (diam, σ)) in enumerate(K.simplices)
 		if K.dimension == 0
 			# σ = {v} = v is a vertex.
 			for n in K.neighbors[σ]
 				coface = encode(sort([σ, n]))
 				diameter = K.distances[σ, n]
 				push!(coboundary_columns[column_index], (diameter, coface, n < σ ? -1 : 1))
+        # Store all edges exactly once, in the correct order (see below for explanation)
+        if n < σ
+          push!(simplices_next_dim, (diameter, coface))
+        end
 			end
 		else
 			# σ = encode(xs) is a higher dimensional simplex
@@ -111,6 +117,13 @@ function coboundary_map(K::VietorisRipsComplex)
 						end
 					end
 					push!(coboundary_columns[column_index], (diameter, coface, coeff))
+          # We also want to create a list of all next-dimensional simplices. We add a simplex to that list if 
+          # the apex is the first vertex of the coface. This ensures uniqueness, and after thinking a while, also
+          # produces simplices in the correct (lex) order.
+          # Note that this is the only not thread-safe part.
+          if apex < xs[1]
+            push!(simplices_next_dim, (diameter, coface))
+          end
 					# Continue with finding more cofaces
 					i = 1
 					neighbor_indices[i] += 1
@@ -119,14 +132,20 @@ function coboundary_map(K::VietorisRipsComplex)
 			# At this point, there are no more cofaces
 		end
 	end
-
-	new_simplices = sort(collect(Set(σ for column in coboundary_columns for (_, σ, _) in column)))
+  # Proably, the most natural way to regard the Vietoris-Rips coboundary matrix is the following:
+  # it is a sparse matrix, with entries (diameter, simplex id in cns, coefficient), where the diameter
+  # is only relevant for sorting. It is then a separate task to build the list of next-dimensional simplices.
+  # However, this does not fit so nicely in the more general sparse matrix framework as of now.
+  # Therefore, we re-order the simplices by grades.
+  #index_to_simplex = [σ for (_, σ) in sort(simplices_next_dim)]
+  sort!(simplices_next_dim)
+  index_of_simplex_next_dim = Dict(σ => i for (i, (_, σ)) in enumerate(simplices_next_dim))
 
 	#TODO Replace by (heap)-sparse matrix
-	dense_mat = zero_matrix(QQ, length(K.simplices), length(new_simplices))
+	mat = zero_matrix(QQ, length(K.simplices), length(simplices_next_dim))
 	for (j, column) in enumerate(coboundary_columns)
 		for (_, i, coeff) in column
-			dense_mat[j, i+1] = coeff
+      mat[j, index_of_simplex_next_dim[i]] = coeff
 		end
 	end
 
@@ -134,8 +153,7 @@ function coboundary_map(K::VietorisRipsComplex)
 		K.distances,
 		K.neighbors,
 		K.dimension + 1,
-		new_simplices,
-		[0.0 for _ in 1:length(new_simplices)],
-	), dense_mat
+    simplices_next_dim
+	), mat
 end
 
