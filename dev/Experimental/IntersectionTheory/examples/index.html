@@ -58,7 +58,7 @@ julia&gt; e, HBl = gens(chow_ring(Bl))
 
 julia&gt; integral((6*HBl-2*e)^5)
 3264
-</code></pre><h4 id="How-Many-Twisted-Cubics-lie-on-the-General-Quintic-Hypersurface"><a class="docs-heading-anchor" href="#How-Many-Twisted-Cubics-lie-on-the-General-Quintic-Hypersurface">How Many Twisted Cubics lie on the General Quintic Hypersurface</a><a id="How-Many-Twisted-Cubics-lie-on-the-General-Quintic-Hypersurface-1"></a><a class="docs-heading-anchor-permalink" href="#How-Many-Twisted-Cubics-lie-on-the-General-Quintic-Hypersurface" title="Permalink"></a></h4><pre><code class="language-julia-repl hljs">julia&gt; G = abstract_grassmannian(3, 5)
+</code></pre><h4 id="How-Many-Conics-lie-on-the-General-Quintic-Hypersurface-in-\\mathbb-P4?"><a class="docs-heading-anchor" href="#How-Many-Conics-lie-on-the-General-Quintic-Hypersurface-in-\\mathbb-P4?">How Many Conics lie on the General Quintic Hypersurface in <span>$\mathbb P^4$</span>?</a><a id="How-Many-Conics-lie-on-the-General-Quintic-Hypersurface-in-\\mathbb-P4?-1"></a><a class="docs-heading-anchor-permalink" href="#How-Many-Conics-lie-on-the-General-Quintic-Hypersurface-in-\\mathbb-P4?" title="Permalink"></a></h4><pre><code class="language-julia-repl hljs">julia&gt; G = abstract_grassmannian(3, 5)
 AbstractVariety of dim 6
 
 julia&gt; USBd = dual(tautological_bundles(G)[1])
@@ -67,7 +67,7 @@ AbstractBundle of rank 3 on AbstractVariety of dim 6
 julia&gt; F = symmetric_power(USBd, 2)
 AbstractBundle of rank 6 on AbstractVariety of dim 6
 
-julia&gt; PF = abstract_projective_bundle(F)
+julia&gt; PF = abstract_projective_bundle(F) # the parameter space of conics in P3
 AbstractVariety of dim 11
 
 julia&gt; A = symmetric_power(USBd, 5) - symmetric_power(USBd, 3)*OO(PF, -1)
@@ -75,4 +75,4 @@ AbstractBundle of rank 11 on AbstractVariety of dim 11
 
 julia&gt; integral(top_chern_class(A))
 609250
-</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../BottFormulas/">« Bott Formulas</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Thursday 1 August 2024 14:39">Thursday 1 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../BottFormulas/">« Bott Formulas</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 5 August 2024 11:18">Monday 5 August 2024</span>. Using Julia version 1.10.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
