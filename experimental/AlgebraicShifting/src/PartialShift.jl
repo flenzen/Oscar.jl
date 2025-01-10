@@ -364,7 +364,9 @@ end
 
 # returns true if the target is the partial shift of src with respect to p
 function check_shifted(F::Field, src::UniformHypergraph,
-                       target::UniformHypergraph, p::PermGroupElem; (ref!)=ModStdQt.ref_ff_rc!)
+                       target::UniformHypergraph, p::PermGroupElem;
+                       (ref!)=ModStdQt.ref_ff_rc!,
+                       restricted_cols=nothing)
   target_faces = sort(faces(target))
   max_face = length(target_faces) == 1 ? target_faces[1] : max(target_faces...)
   # currently number of faces of src and target are the same
@@ -372,16 +374,28 @@ function check_shifted(F::Field, src::UniformHypergraph,
   num_rows = length(faces(src))
   n = n_vertices(src)
   k = face_size(src)
+
   nCk = sort(subsets(n, k))
   max_face_index = findfirst(x -> x == max_face, nCk)
   # limits the columns by the max face of source
   cols = nCk[1:max_face_index - 1]
+
+  # restricted columns is used when we know apriori that certain columns
+  # cannot appear in the shifted complex.
+  # for example when we know that a column corresponds to a face that contains
+  # a lower dimensional non face
+  if !isnothing(restricted_cols)
+    cols_indices = findall(x -> Set(x) in restricted_cols, cols)
+  else
+    cols_indices = collect(1:length(cols))
+  end
+    
   r = rothe_matrix(F, p)
 
   if max_face_index > num_rows
-    M = compound_matrix(r, src)[collect(1:num_rows), collect(1:length(cols))]
+    M = compound_matrix(r, src)[collect(1:num_rows), cols_indices]
     ref!(M)
-    nCk[independent_columns(M)] != target_faces[1:end - 1] && return false
+    nCk[cols_indices][independent_columns(M)] != target_faces[1:end - 1] && return false
   end
   return true
 end
@@ -390,12 +404,17 @@ function check_shifted(F::Field, src::SimplicialComplex,
                        target::SimplicialComplex, p::PermGroupElem; (ref!)=ModStdQt.ref_ff_rc!)
   n = n_vertices(src)
   f_vec = f_vector(src)
-  k = length(f_vec)
-  while k > 1
+  k = 2
+  restricted_cols = nothing
+  while k <= length(f_vec)
     uhg_src = uniform_hypergraph(complex_faces(src, k - 1), n)
     uhg_target = uniform_hypergraph(complex_faces(target, k - 1), n)
-    !check_shifted(F, uhg_src, uhg_target, p; (ref!)=(ref!)) && return false
-    k -= 1
+    !check_shifted(F, uhg_src, uhg_target, p;
+                   (ref!)=(ref!),
+                   restricted_cols=restricted_cols) && return false
+    non_faces = setdiff(Set.(subsets(n, k)), Set(faces(uhg_target)))
+    restricted_cols = filter(x -> all(nf -> !(nf ⊆ x), non_faces), Set.(subsets(n, k + 1)))
+    k += 1
   end
   return true
 end
