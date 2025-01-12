@@ -380,22 +380,20 @@ function check_shifted(F::Field, src::UniformHypergraph,
   # limits the columns by the max face of source
   cols = nCk[1:max_face_index - 1]
 
-  # restricted columns is used when we know apriori that certain columns
-  # cannot appear in the shifted complex.
-  # for example when we know that a column corresponds to a face that contains
-  # a lower dimensional non face
-  if !isnothing(restricted_cols)
-    cols_indices = findall(x -> Set(x) in restricted_cols, cols)
-  else
-    cols_indices = collect(1:length(cols))
-  end
-    
   r = rothe_matrix(F, p)
 
   if max_face_index > num_rows
-    M = compound_matrix(r, src)[collect(1:num_rows), cols_indices]
+    M = compound_matrix(r, src)[collect(1:num_rows), 1:max_face_index - 1]
+    # restricted columns is used when we know apriori that certain columns
+    # cannot appear in the shifted complex.
+    # for example when we know that a column corresponds to a face that contains
+    # a lower dimensional non face
+    if !isnothing(restricted_cols)
+      cols_indices = findall(x -> !(Set(x) in restricted_cols), cols)
+      M[:, cols_indices] .= 0
+    end
     ref!(M)
-    nCk[cols_indices][independent_columns(M)] != target_faces[1:end - 1] && return false
+    nCk[independent_columns(M)] != target_faces[1:end - 1] && return false
   end
   return true
 end
@@ -412,7 +410,7 @@ function check_shifted(F::Field, src::SimplicialComplex,
     !check_shifted(F, uhg_src, uhg_target, p;
                    (ref!)=(ref!),
                    restricted_cols=restricted_cols) && return false
-    non_faces = setdiff(Set.(subsets(n, k)), Set(faces(uhg_target)))
+    non_faces = setdiff(Set.(subsets(n, k)), Set.(faces(uhg_target)))
     restricted_cols = filter(x -> all(nf -> !(nf ⊆ x), non_faces), Set.(subsets(n, k + 1)))
     k += 1
   end
