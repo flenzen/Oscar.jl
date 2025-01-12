@@ -382,15 +382,25 @@ function check_shifted(F::Field, src::UniformHypergraph,
 
   r = rothe_matrix(F, p)
 
-  if max_face_index > num_rows
+  # restricted columns is used when we know apriori that certain columns
+  # cannot appear in the shifted complex.
+  # for example when we know that a column corresponds to a face that contains
+  # a lower dimensional non face
+
+  # if the # of non zeros cols up to max_face_index is equal to the rank
+  # we do not need to do any row reduction
+  if !isnothing(restricted_cols)
+    zero_cols_indices = findall(x -> !(Set(x) in restricted_cols), cols)
+    needs_check = max_face_index - length(zero_cols_indices) > num_rows
+  else
+    zero_cols_indices = Int[]
+    needs_check = max_face_index > num_rows
+  end
+  
+  if needs_check
     M = compound_matrix(r, src)[collect(1:num_rows), 1:max_face_index - 1]
-    # restricted columns is used when we know apriori that certain columns
-    # cannot appear in the shifted complex.
-    # for example when we know that a column corresponds to a face that contains
-    # a lower dimensional non face
-    if !isnothing(restricted_cols)
-      cols_indices = findall(x -> !(Set(x) in restricted_cols), cols)
-      M[:, cols_indices] .= 0
+    if !isempty(zero_cols_indices)
+      M[:, zero_cols_indices] .= 0
     end
     ref!(M)
     nCk[independent_columns(M)] != target_faces[1:end - 1] && return false
