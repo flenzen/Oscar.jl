@@ -1,9 +1,14 @@
 ```@meta
 CurrentModule = Oscar
+CollapsedDocStrings = true
 DocTestSetup = Oscar.doctestsetup()
 ```
 
 # Abstract Bundles
+
+## Types
+
+The OSCAR type for abstract vector bundles is `AbstractBundle`.
 
 ## Constructors
 
@@ -13,16 +18,18 @@ abstract_bundle(X::AbstractVariety, ch::Union{MPolyDecRingElem, MPolyQuoRingElem
 
 ## Underlying Data of an Abstract Bundle
 
+An abstract bundle is made up from (a selection of) the data discussed here:
+
 ```@docs
 parent(F::AbstractBundle)
 ```
 
 ```@docs
-rank(F::AbstractBundle)
+chern_character(F::AbstractBundle)
 ```
 
 ```@docs
-chern_character(F::AbstractBundle)
+rank(F::AbstractBundle)
 ```
 
 ```@docs

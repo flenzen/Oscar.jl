@@ -55,8 +55,8 @@
 # I can't test simply pf==p, because it returns FALSE. The line
  #      polynomial_ring(F,4)[1]==polynomial_ring(F,4)[1]
 # returns FALSE.
-   @test_throws ArgumentError corresponding_quadratic_form(Q)
-   @test_throws ArgumentError corresponding_bilinear_form(f)
+   @test_throws MethodError corresponding_quadratic_form(Q)
+   @test_throws MethodError corresponding_bilinear_form(f)
 
    R,x = polynomial_ring(F,:x)
    p = x^2*z
@@ -109,8 +109,8 @@ end
    end
    end
 
-   @test_throws ArgumentError Q(V[1],V[5])
-   @test_throws ArgumentError f(V[2])
+   @test_throws MethodError Q(V[1],V[5])
+   @test_throws MethodError f(V[2])
 
    g = rand(GL(6,F))
    v = rand(V)
@@ -645,4 +645,25 @@ end
   H = hyperbolic_plane_lattice()
   G = orthogonal_group(H)
   @test order(G) == 4
+  
+  L = integer_lattice(gram=ZZ[4 1 1; 1 -2 0; 1 0 -2;])
+  v = QQ[1 0 0;]
+  G = stabilizer_in_orthogonal_group(L, v)
+  @test order(G)==2
+  @test all(v*matrix(g)==v for g in gens(G))
+
+  for i in 2:5
+    Ai = root_lattice(:A, i)
+    S = symmetric_group(i+1)
+    A = alternating_group(i+1)
+    T = isodd(i) ? S : direct_product(A, cyclic_group(2))
+    O_st, _ = stable_orthogonal_group(Ai)
+    @test is_isomorphic(O_st, S)
+
+    O_sp, _ = special_orthogonal_group(Ai)
+    @test is_isomorphic(O_sp, T)
+
+    O_spst, _ = Oscar._special_stable_orthogonal_group(Ai)
+    @test is_isomorphic(O_spst, A)
+  end
 end

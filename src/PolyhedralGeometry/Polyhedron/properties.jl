@@ -492,6 +492,7 @@ Return the facets of `P` in the format defined by `as`.
 
 The allowed values for `as` are
 * `Halfspace` (or its subtype `AffineHalfspace`),
+* `Hyperplane` (or its subtype `AffineHyperplane`),
 * `Polyhedron`,
 * `Pair`.
 
@@ -521,7 +522,10 @@ x_3 <= 1
 """
 facets(
   as::Type{T}, P::Polyhedron{S}
-) where {S<:scalar_types,T<:Union{AffineHalfspace{S},Pair{R,S} where R,Polyhedron{S}}} =
+) where {
+  S<:scalar_types,
+  T<:Union{AffineHalfspace{S},AffineHyperplane{S},Pair{R,S} where R,Polyhedron{S}},
+} =
   SubObjectIterator{as}(P, _facet_polyhedron, n_facets(P))
 
 function _facet_polyhedron(
@@ -544,6 +548,12 @@ function _facet_polyhedron(
     Polymake.polytope.facet(pm_object(P), _facet_index(pm_object(P), i) - 1),
     coefficient_field(P),
   )
+end
+function _facet_polyhedron(
+  U::Type{AffineHyperplane{S}}, P::Polyhedron{S}, i::Base.Integer
+) where {S<:scalar_types}
+  h = decompose_hdata(view(pm_object(P).FACETS, [_facet_index(pm_object(P), i)], :))
+  return affine_hyperplane(coefficient_field(P), h[1], h[2][])::U
 end
 
 _affine_inequality_matrix(::Val{_facet_polyhedron}, P::Polyhedron) =
@@ -582,30 +592,12 @@ facets(::Type{<:Pair}, P::Polyhedron{T}) where {T<:scalar_types} =
 facets(::Type{Polyhedron}, P::Polyhedron{T}) where {T<:scalar_types} =
   facets(Polyhedron{T}, P)
 
-@doc raw"""
-    facets(P::Polyhedron)
-
-Return the facets of `P` as halfspaces.
-
-# Examples
-We can retrieve the six facets of the 3-dimensional cube this way:
-```jldoctest
-julia> C = cube(3);
-
-julia> facets(C)
-6-element SubObjectIterator{AffineHalfspace{QQFieldElem}} over the halfspaces of R^3 described by:
--x_1 <= 1
-x_1 <= 1
--x_2 <= 1
-x_2 <= 1
--x_3 <= 1
-x_3 <= 1
-```
-"""
 facets(P::Polyhedron{T}) where {T<:scalar_types} = facets(AffineHalfspace{T}, P)
 
 facets(::Type{<:Halfspace}, P::Polyhedron{T}) where {T<:scalar_types} =
   facets(AffineHalfspace{T}, P)
+facets(::Type{<:Hyperplane}, P::Polyhedron{T}) where {T<:scalar_types} =
+  facets(AffineHyperplane{T}, P)
 
 function _facet_index(P::Polymake.BigObject, i::Base.Integer)
   i < _facet_at_infinity(P) && return i
@@ -712,6 +704,48 @@ julia> normalized_volume(C)
 """
 normalized_volume(P::Polyhedron) =
   coefficient_field(P)(factorial(dim(P)) * (pm_object(P)).VOLUME)
+
+@doc raw"""
+    castelnuovo_excess(P::Polyhedron)
+
+For an arbitrary lattice polytope, Hibi [Hib94](@cite) proved that the normalized volume is always at least as large as a certain lattice point count.
+This function returns the difference between those two numbers.
+
+# Examples
+```jldoctest
+julia> castelnuovo_excess(cube(4))
+154
+```
+"""
+function castelnuovo_excess(P::Polyhedron)
+  _assert_lattice(P)
+  d = dim(P)
+  l = ZZ(pm_object(P).N_LATTICE_POINTS)::ZZRingElem
+  c = ZZ(pm_object(P).N_INTERIOR_LATTICE_POINTS)::ZZRingElem
+  b = l - c
+  e = (d * c + (d - 1) * b - d^2 + 2)
+  # the normalized volume is an integer as P is lattice
+  return numerator(normalized_volume(P)) - e
+end
+
+@doc raw"""
+    is_castelnuovo(P::Polyhedron)
+
+For an arbitrary lattice polytope, Hibi [Hib94](@cite) proved that the normalized volume is always at least as large as a certain lattice point count.
+This function returns true if both numbers agree.
+
+# Examples
+```jldoctest
+julia> is_castelnuovo(cube(2))
+true
+
+julia> is_castelnuovo(cube(4))
+false
+```
+"""
+function is_castelnuovo(P::Polyhedron)
+  return castelnuovo_excess(P) == 0
+end
 
 @doc raw"""
     dim(P::Polyhedron)
@@ -1296,7 +1330,7 @@ is_bounded(P::Polyhedron) = pm_object(P).BOUNDED::Bool
 @doc raw"""
     is_simple(P::Polyhedron)
 
-Check whether `P` is simple.
+Check whether `P` is simple, i.e., each vertex figure is a simplex.
 
 # Examples
 ```jldoctest
@@ -1312,9 +1346,45 @@ is_simple(P::Polyhedron) = pm_object(P).SIMPLE::Bool
 @doc raw"""
     is_simplicial(P::Polyhedron)
 
-Check whether `P` is simplicial.
+Check whether `P` is simplicial, i.e., each proper face is a simplex.
 """
 is_simplicial(P::Polyhedron) = pm_object(P).SIMPLICIAL::Bool
+
+@doc raw"""
+    is_neighborly(P::Polyhedron)
+
+Check whether `P` is neighborly, i.e., if the dimension is $d$, each $\lfloor d/2 \rfloor$-subset of the vertices forms a face.
+Neighborly polytopes in even dimension are necessarily simplicial.
+
+# Examples
+
+A 4-polytope is neighborly if and only if the vertex-edge graph is complete.
+
+```jldoctest
+julia> is_neighborly(cyclic_polytope(4,8))
+true
+```
+"""
+is_neighborly(P::Polyhedron) = pm_object(P).NEIGHBORLY::Bool
+
+@doc raw"""
+    is_cubical(P::Polyhedron)
+
+Check whether `P` is cubical, i.e., each proper face is combinatorially equivalent to a cube.
+
+# Examples
+
+For details concerning the following construction see [JZ00](@cite).
+
+```jldoctest
+julia> Q = cube(2,-1,1); Q2 = cube(2,-2,2); P = convex_hull(product(Q,Q2), product(Q2,Q))
+Polyhedron in ambient dimension 4
+
+julia> is_cubical(P)
+true
+```
+"""
+is_cubical(P::Polyhedron) = pm_object(P).CUBICAL::Bool
 
 @doc raw"""
     is_fulldimensional(P::Polyhedron)
@@ -1441,8 +1511,7 @@ function _squared_distance(p::PointVector, q::PointVector)
 end
 
 function _has_equal_facets(P::Polyhedron)
-  nv = facet_sizes(P)
-  return @static VERSION >= v"1.8" ? allequal(nv) : length(unique(nv)) == 1
+  return allequal(facet_sizes(P))
 end
 
 @doc raw"""
@@ -1516,12 +1585,12 @@ julia> f_vector(cube(5))
  10
 ```
 """
-function f_vector(P::Polyhedron)::Vector{ZZRingElem}
+function f_vector(P::Polyhedron)
   # the following differs from polymake's count in the unbounded case;
   # polymake takes the far face into account, too
   ldim = lineality_dim(P)
   f_vec = vcat(zeros(Int64, ldim), [length(faces(P, i)) for i in ldim:(dim(P) - 1)])
-  return f_vec
+  return Vector{ZZRingElem}(f_vec)
 end
 
 @doc raw"""
@@ -1541,9 +1610,9 @@ julia> h_vector(cross_polytope(3))
  1
 ```
 """
-function h_vector(P::Polyhedron)::Vector{ZZRingElem}
+function h_vector(P::Polyhedron)
   @req is_bounded(P) "defined for bounded polytopes only"
-  return pm_object(P).H_VECTOR
+  return Vector{ZZRingElem}(pm_object(P).H_VECTOR)
 end
 
 @doc raw"""
@@ -1561,9 +1630,9 @@ julia> g_vector(cross_polytope(3))
  2
 ```
 """
-function g_vector(P::Polyhedron)::Vector{ZZRingElem}
+function g_vector(P::Polyhedron)
   @req is_bounded(P) "defined for bounded polytopes only"
-  return pm_object(P).G_VECTOR
+  return Vector{ZZRingElem}(pm_object(P).G_VECTOR)
 end
 
 @doc raw"""
